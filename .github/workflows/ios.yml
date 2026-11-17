@@ -1,0 +1,71 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    name: Build iOS Runner & IPA
+    runs-on: macos-14
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Clean Local Ephemeral Files
+        run: |
+          rm -f ios/Flutter/Generated.xcconfig
+          rm -f ios/Flutter/flutter_export_environment.sh
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Run Tests
+        run: flutter test
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install || pod update
+          cd ..
+
+      - name: Build iOS App (No Codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package Payload into Sideloadly IPA
+        run: |
+          mkdir -p build/ios/iphoneos/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
+          cd build/ios/iphoneos
+          zip -r -9 CloudDragonStudio.ipa Payload
+          cd ../../..
+          ls -lh build/ios/iphoneos/CloudDragonStudio.ipa
+
+      - name: Upload iOS App Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CloudDragonStudio-iOS-IPA
+          path: build/ios/iphoneos/CloudDragonStudio.ipa
+          retention-days: 14
+
+      - name: Create GitHub Release
+        continue-on-error: true
+        run: |
+          gh release delete v1.0.0 --yes || true
+          gh release create v1.0.0 build/ios/iphoneos/CloudDragonStudio.ipa \
+            --title "Cloud Dragon Studio iOS v1.0.0" \
+            --notes "Native iOS IPA package ready for Sideloadly, AltStore, and TrollStore."
+        env:
+          GH_TOKEN: ${{ github.token }}
