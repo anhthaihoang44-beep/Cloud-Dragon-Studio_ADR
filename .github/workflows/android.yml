@@ -47,14 +47,18 @@ jobs:
           retention-days: 14
 
       - name: Upload APK Release Asset
+        if: github.event_name != 'pull_request'
         continue-on-error: true
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk CloudDragonStudio.apk
           if ! gh release view v1.0.0 >/dev/null 2>&1; then
             gh release create v1.0.0 CloudDragonStudio.apk \
-              --title "Cloud Dragon Studio v1.0.0" \
-              --notes "Cloud Dragon Studio Android APK & iOS IPA Releases." || gh release upload v1.0.0 CloudDragonStudio.apk --clobber
+              --title "Cloud Dragon Studio Android v1.0.0" \
+              --notes "Cloud Dragon Studio Android APK Release." || gh release upload v1.0.0 CloudDragonStudio.apk --clobber
           else
+            gh release edit v1.0.0 \
+              --title "Cloud Dragon Studio Android v1.0.0" \
+              --notes "Cloud Dragon Studio Android APK Release." || true
             gh release upload v1.0.0 CloudDragonStudio.apk --clobber
           fi
         env:
