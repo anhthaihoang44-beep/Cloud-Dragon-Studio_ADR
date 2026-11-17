@@ -49,5 +49,7 @@ app.*.map.json
 
 # Temporary scratch files and test images
 /*.png
+/*.ipa
+/*.apk
 /capture_*.py
 /2297d04a-61be-475a-875b-e5fdab767ba4/
